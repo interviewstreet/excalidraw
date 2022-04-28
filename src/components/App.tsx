@@ -1200,6 +1200,7 @@ class App extends React.Component<AppProps, AppState> {
       );
       cursorButton[socketId] = user.button;
     });
+    let activeComment = this.state.activeComment;
     const renderingElements = this.scene.getElements().filter((element) => {
       if (isImageElement(element)) {
         if (
@@ -1227,6 +1228,7 @@ class App extends React.Component<AppProps, AppState> {
           canvasX !== this.state.activeComment.canvasX ||
           canvasY !== this.state.activeComment.canvasY
         ) {
+          activeComment = { element, canvasX, canvasY };
           this.props.onActiveCommentUpdate?.(element, canvasX, canvasY);
         }
       }
@@ -1284,7 +1286,10 @@ class App extends React.Component<AppProps, AppState> {
     if (!this.state.isLoading) {
       this.props.onChange?.(
         this.scene.getElementsIncludingDeleted(),
-        this.state,
+        {
+          ...this.state,
+          activeComment,
+        },
         this.files,
       );
     }
@@ -3601,6 +3606,11 @@ class App extends React.Component<AppProps, AppState> {
                   canvasX,
                   canvasY,
                 };
+                this.props.onActiveCommentUpdate?.(
+                  hitElement,
+                  canvasX,
+                  canvasY,
+                );
               }
 
               this.setState((prevState) => {
