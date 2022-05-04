@@ -149,6 +149,7 @@ import {
   FileId,
   NonDeletedExcalidrawElement,
   ExcalidrawTextContainer,
+  ExcalidrawCommentElement,
 } from "../element/types";
 import { getCenter, getDistance } from "../gesture";
 import {
@@ -1228,6 +1229,7 @@ class App extends React.Component<AppProps, AppState> {
       cursorButton[socketId] = user.button;
     });
     let activeComment = this.state.activeComment;
+    const commentElements: NonDeleted<ExcalidrawCommentElement>[] = [];
     const renderingElements = this.scene.getElements().filter((element) => {
       if (isImageElement(element)) {
         if (
@@ -1240,7 +1242,6 @@ class App extends React.Component<AppProps, AppState> {
       }
       // don't render text element that's being currently edited (it's
       // rendered on remote only)
-
       if (isCommentElement(element)) {
         if (this.state.activeComment?.element.id === element.id) {
           const { x: canvasX, y: canvasY } = sceneCoordsToViewportCoords(
@@ -1268,6 +1269,8 @@ class App extends React.Component<AppProps, AppState> {
           };
         }
         this.cacheCommentOwnerImage(element.owner);
+        commentElements.push(element);
+        return false;
       }
       return (
         !this.state.editingElement ||
@@ -1276,7 +1279,7 @@ class App extends React.Component<AppProps, AppState> {
       );
     });
     const { atLeastOneVisibleElement, scrollBars } = renderScene(
-      renderingElements,
+      [...renderingElements, ...commentElements], // this is because we want to keep CommentElements on top of every other element
       this.state,
       this.state.selectionElement,
       window.devicePixelRatio,
