@@ -687,6 +687,10 @@ const ExcalidrawWrapper = () => {
           color: "#00ff",
           // image: "https://lh3.googleusercontent.com/a-/AOh14GhnBcE5G6gu8ZYjEanRJ4-SUNI7GLshrGuJfGoo=s96-c",
         }}
+        registerComment={async (x, y) => {
+          // on backend createComment with x,y coords
+          return "";
+        }}
       />
       {excalidrawAPI && (
         <CollabWrapper

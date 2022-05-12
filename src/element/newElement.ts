@@ -124,6 +124,7 @@ export const newCommentElement = (opts: {
   x: number;
   y: number;
   owner: CommentOwner;
+  commentID: string;
 }): NonDeleted<ExcalidrawCommentElement> => {
   const height = 40;
   const width = 40;
@@ -145,6 +146,7 @@ export const newCommentElement = (opts: {
       roughness: 0,
     }),
     owner: opts.owner,
+    commentID: opts.commentID,
   };
 };
 

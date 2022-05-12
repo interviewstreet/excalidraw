@@ -280,6 +280,7 @@ export interface ExcalidrawProps {
     }>,
   ) => void;
   user?: UserProp;
+  registerComment: (canvasX: number, canvasY: number) => Promise<string>;
 }
 
 export type UserProp = Readonly<{

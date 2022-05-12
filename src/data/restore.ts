@@ -209,6 +209,7 @@ const restoreElement = (
     case "comment":
       return restoreElementWithProperties(element, {
         owner: element.owner,
+        commentID: element.commentID,
       });
 
     // Don't use default case so as to catch a missing an element type case.

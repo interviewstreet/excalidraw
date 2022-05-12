@@ -3698,10 +3698,10 @@ class App extends React.Component<AppProps, AppState> {
     );
   }
 
-  private handleCommentElementOnPointerDown = (
+  private handleCommentElementOnPointerDown = async (
     elementType: "comment",
     pointerDownState: PointerDownState,
-  ): void => {
+  ): Promise<void> => {
     if (!this.props.user) {
       return;
     }
@@ -3711,11 +3711,22 @@ class App extends React.Component<AppProps, AppState> {
       this.state.gridSize,
     );
 
+    const { x, y } = sceneCoordsToViewportCoords(
+      {
+        sceneX: gridX,
+        sceneY: gridY,
+      },
+      this.state,
+    );
+
+    const commentID = await this.props.registerComment(x, y);
+
     const element = newCommentElement({
       type: elementType,
       x: gridX,
       y: gridY,
       owner: this.excalOwner,
+      commentID,
     });
 
     this.scene.replaceAllElements([
