@@ -37,6 +37,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     autoFocus = false,
     generateIdForFile,
     onLinkOpen,
+    registerComment,
     user,
   } = props;
 
@@ -102,6 +103,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
           generateIdForFile={generateIdForFile}
           onLinkOpen={onLinkOpen}
           user={user}
+          registerComment={registerComment}
         />
       </Provider>
     </InitializeApp>
