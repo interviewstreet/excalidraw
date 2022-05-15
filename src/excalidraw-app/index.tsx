@@ -683,13 +683,13 @@ const ExcalidrawWrapper = () => {
         user={{
           first_name: "Iron",
           last_name: "Man",
-          email: "patel.vivek@hackerrank.com",
+          email: "iron.man@hackerrank.com",
           color: "#00ff",
-          // image: "https://lh3.googleusercontent.com/a-/AOh14GhnBcE5G6gu8ZYjEanRJ4-SUNI7GLshrGuJfGoo=s96-c",
+          image: "https://i.pravatar.cc/200",
         }}
         registerComment={async (x, y) => {
           // on backend createComment with x,y coords
-          return "";
+          return "abcdefgh";
         }}
       />
       {excalidrawAPI && (

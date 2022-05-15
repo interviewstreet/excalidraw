@@ -431,7 +431,13 @@ class App extends React.Component<AppProps, AppState> {
 
   private cacheCommentOwnerImage(user: CommentOwner) {
     if (user.image) {
-      // get image data from user.image url
+      try {
+        const oldImage = this.imageCache.get(user.id as FileId)?.image;
+        // @ts-ignore
+        if (oldImage && oldImage?.src === user.image) {
+          return;
+        }
+      } catch {}
       const image = new Image();
       image.src = user.image;
       image.onload = () => {
