@@ -6,7 +6,7 @@ import { t } from "../i18n";
 import { register } from "./register";
 import { getNonDeletedElements } from "../element";
 import { ExcalidrawCommentElement, ExcalidrawElement } from "../element/types";
-import { AppState } from "../types";
+import { AppState, UserProp } from "../types";
 import { newElementWith } from "../element/mutateElement";
 import { getElementsInGroup } from "../groups";
 import { LinearElementEditor } from "../element/linearElementEditor";
@@ -17,6 +17,7 @@ const deleteSelectedElements = (
   elements: readonly ExcalidrawElement[],
   appState: AppState,
   onDeleteCommentElements?: (deletedCommentElementIDs: Array<string>) => void,
+  currentUser?: UserProp,
 ) => {
   let isActiveCommentDeleted = false;
   const deletedCommentElementIDs: string[] = [];
@@ -25,7 +26,10 @@ const deleteSelectedElements = (
       if (appState.activeComment?.element.id === el.id) {
         isActiveCommentDeleted = true;
       }
-      if (isCommentElement(el)) {
+      if (isCommentElement(el) && currentUser) {
+        if (el.owner.email !== currentUser.email) {
+          return el;
+        }
         deletedCommentElementIDs.push(el.commentID);
       }
       return newElementWith(el, { isDeleted: true });
@@ -34,7 +38,12 @@ const deleteSelectedElements = (
       if (appState.activeComment?.element.id === el.id) {
         isActiveCommentDeleted = true;
       }
-      if (isCommentElement(el)) {
+      if (isCommentElement(el) && currentUser) {
+        if (
+          (el as ExcalidrawCommentElement).owner.email !== currentUser.email
+        ) {
+          return el;
+        }
         deletedCommentElementIDs.push(
           (el as ExcalidrawCommentElement).commentID,
         );
@@ -145,6 +154,7 @@ export const actionDeleteSelected = register({
         elements,
         appState,
         app.props.onDeleteCommentElements,
+        app.props.user,
       );
     fixBindingsAfterDeletion(
       nextElements,
