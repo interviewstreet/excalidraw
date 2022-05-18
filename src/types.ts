@@ -281,7 +281,7 @@ export interface ExcalidrawProps {
   ) => void;
   user?: UserProp;
   registerComment: (canvasX: number, canvasY: number) => Promise<string>;
-  onDeleteCommentElements?: (commentIDs: Array<string>) => void;
+  deletedCommentID?: string;
 }
 
 export type UserProp = Readonly<{

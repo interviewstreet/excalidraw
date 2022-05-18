@@ -39,7 +39,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     onLinkOpen,
     registerComment,
     user,
-    onDeleteCommentElements,
+    deletedCommentID,
   } = props;
 
   const canvasActions = props.UIOptions?.canvasActions;
@@ -105,7 +105,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
           onLinkOpen={onLinkOpen}
           user={user}
           registerComment={registerComment}
-          onDeleteCommentElements={onDeleteCommentElements}
+          deletedCommentID={deletedCommentID}
         />
       </Provider>
     </InitializeApp>

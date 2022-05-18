@@ -16,21 +16,26 @@ import { isBoundToContainer, isCommentElement } from "../element/typeChecks";
 const deleteSelectedElements = (
   elements: readonly ExcalidrawElement[],
   appState: AppState,
-  onDeleteCommentElements?: (deletedCommentElementIDs: Array<string>) => void,
   currentUser?: UserProp,
+  canCommentElementBeDeleted = true,
+  forceDeleteElement?: ExcalidrawElement,
 ) => {
   let isActiveCommentDeleted = false;
-  const deletedCommentElementIDs: string[] = [];
   const nextElements = elements.map((el) => {
+    if (forceDeleteElement?.id === el.id) {
+      return newElementWith(el, { isDeleted: true });
+    }
     if (appState.selectedElementIds[el.id]) {
       if (appState.activeComment?.element.id === el.id) {
         isActiveCommentDeleted = true;
       }
-      if (isCommentElement(el) && currentUser) {
-        if (el.owner.email !== currentUser.email) {
+      if (isCommentElement(el)) {
+        if (
+          (currentUser && el.owner.email !== currentUser.email) ||
+          !canCommentElementBeDeleted
+        ) {
           return el;
         }
-        deletedCommentElementIDs.push(el.commentID);
       }
       return newElementWith(el, { isDeleted: true });
     }
@@ -38,23 +43,20 @@ const deleteSelectedElements = (
       if (appState.activeComment?.element.id === el.id) {
         isActiveCommentDeleted = true;
       }
-      if (isCommentElement(el) && currentUser) {
+      if (isCommentElement(el)) {
         if (
-          (el as ExcalidrawCommentElement).owner.email !== currentUser.email
+          (currentUser &&
+            (el as ExcalidrawCommentElement).owner.email !==
+              currentUser.email) ||
+          !canCommentElementBeDeleted
         ) {
           return el;
         }
-        deletedCommentElementIDs.push(
-          (el as ExcalidrawCommentElement).commentID,
-        );
       }
       return newElementWith(el, { isDeleted: true });
     }
     return el;
   });
-  if (deletedCommentElementIDs.length) {
-    onDeleteCommentElements?.(deletedCommentElementIDs);
-  }
   return {
     elements: nextElements,
     appState: {
@@ -87,7 +89,7 @@ const handleGroupEditingState = (
 export const actionDeleteSelected = register({
   name: "deleteSelectedElements",
   trackEvent: { category: "element", action: "delete" },
-  perform: (elements, appState, _, app) => {
+  perform: (elements, appState, elementToForceDelete, app) => {
     if (appState.editingLinearElement) {
       const {
         elementId,
@@ -149,12 +151,14 @@ export const actionDeleteSelected = register({
         commitToHistory: true,
       };
     }
+
     let { elements: nextElements, appState: nextAppState } =
       deleteSelectedElements(
         elements,
         appState,
-        app.props.onDeleteCommentElements,
         app.props.user,
+        false,
+        elementToForceDelete,
       );
     fixBindingsAfterDeletion(
       nextElements,

@@ -1334,10 +1334,31 @@ class App extends React.Component<AppProps, AppState> {
         this.scene.getElementsIncludingDeleted(),
         {
           ...this.state,
-          activeComment,
+          activeComment:
+            activeComment?.element.commentID === this.props.deletedCommentID
+              ? null
+              : activeComment,
         },
         this.files,
       );
+    }
+    if (
+      this.props.deletedCommentID &&
+      prevProps.deletedCommentID !== this.props.deletedCommentID
+    ) {
+      const elementToForceDelete = commentElements.find(
+        (element) => element.commentID === this.props.deletedCommentID,
+      );
+      if (elementToForceDelete) {
+        this.syncActionResult(
+          actionDeleteSelected.perform(
+            this.scene.getElementsIncludingDeleted(),
+            this.state,
+            elementToForceDelete,
+            this,
+          ),
+        );
+      }
     }
   }
 
@@ -2951,7 +2972,9 @@ class App extends React.Component<AppProps, AppState> {
     const point = { ...pointerDownState.lastCoords };
     let samplingInterval = 0;
     while (samplingInterval <= distance) {
-      const hitElements = this.getElementsAtPosition(point.x, point.y);
+      const hitElements = this.getElementsAtPosition(point.x, point.y).filter(
+        (ele) => !isCommentElement(ele),
+      );
       updateElementIds(hitElements);
 
       // Exit since we reached current point
@@ -2972,6 +2995,9 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     const elements = this.scene.getElements().map((ele) => {
+      if (isCommentElement(ele)) {
+        return ele;
+      }
       const id =
         isBoundToContainer(ele) && idsToUpdate.includes(ele.containerId)
           ? ele.containerId
@@ -4853,6 +4879,9 @@ class App extends React.Component<AppProps, AppState> {
 
   private eraseElements = (pointerDownState: PointerDownState) => {
     const elements = this.scene.getElements().map((ele) => {
+      if (isCommentElement(ele)) {
+        return ele;
+      }
       if (
         pointerDownState.elementIdsToErase[ele.id] &&
         pointerDownState.elementIdsToErase[ele.id].erase
@@ -5829,9 +5858,10 @@ class App extends React.Component<AppProps, AppState> {
                 actionDuplicateSelection,
                 actionToggleLock,
                 separator,
+                actionDeleteSelected,
               ];
         ContextMenu.push({
-          options: [...contextMenuOptions, actionDeleteSelected],
+          options: [...contextMenuOptions],
           top,
           left,
           actionManager: this.actionManager,
