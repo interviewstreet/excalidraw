@@ -22,8 +22,11 @@ const deleteSelectedElements = (
 ) => {
   let isActiveCommentDeleted = false;
   const nextElements = elements.map((el) => {
-    if (forceDeleteElement?.id === el.id) {
-      return newElementWith(el, { isDeleted: true });
+    if (forceDeleteElement) {
+      if (forceDeleteElement.id === el.id) {
+        return newElementWith(el, { isDeleted: true });
+      }
+      return el;
     }
     if (appState.selectedElementIds[el.id]) {
       if (appState.activeComment?.element.id === el.id) {
@@ -174,10 +177,9 @@ export const actionDeleteSelected = register({
         activeTool: { ...appState.activeTool, type: "selection" },
         multiElement: null,
       },
-      commitToHistory: isSomeElementSelected(
-        getNonDeletedElements(elements),
-        appState,
-      ),
+      commitToHistory: elementToForceDelete
+        ? false
+        : isSomeElementSelected(getNonDeletedElements(elements), appState),
     };
   },
   contextItemLabel: "labels.delete",
