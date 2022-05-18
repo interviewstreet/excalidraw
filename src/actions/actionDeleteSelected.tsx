@@ -5,23 +5,28 @@ import { trash } from "../components/icons";
 import { t } from "../i18n";
 import { register } from "./register";
 import { getNonDeletedElements } from "../element";
-import { ExcalidrawElement } from "../element/types";
+import { ExcalidrawCommentElement, ExcalidrawElement } from "../element/types";
 import { AppState } from "../types";
 import { newElementWith } from "../element/mutateElement";
 import { getElementsInGroup } from "../groups";
 import { LinearElementEditor } from "../element/linearElementEditor";
 import { fixBindingsAfterDeletion } from "../element/binding";
-import { isBoundToContainer } from "../element/typeChecks";
+import { isBoundToContainer, isCommentElement } from "../element/typeChecks";
 
 const deleteSelectedElements = (
   elements: readonly ExcalidrawElement[],
   appState: AppState,
+  onDeleteCommentElements?: (deletedCommentElementIDs: Array<string>) => void,
 ) => {
   let isActiveCommentDeleted = false;
+  const deletedCommentElementIDs: string[] = [];
   const nextElements = elements.map((el) => {
     if (appState.selectedElementIds[el.id]) {
       if (appState.activeComment?.element.id === el.id) {
         isActiveCommentDeleted = true;
+      }
+      if (isCommentElement(el)) {
+        deletedCommentElementIDs.push(el.commentID);
       }
       return newElementWith(el, { isDeleted: true });
     }
@@ -29,10 +34,18 @@ const deleteSelectedElements = (
       if (appState.activeComment?.element.id === el.id) {
         isActiveCommentDeleted = true;
       }
+      if (isCommentElement(el)) {
+        deletedCommentElementIDs.push(
+          (el as ExcalidrawCommentElement).commentID,
+        );
+      }
       return newElementWith(el, { isDeleted: true });
     }
     return el;
   });
+  if (deletedCommentElementIDs.length) {
+    onDeleteCommentElements?.(deletedCommentElementIDs);
+  }
   return {
     elements: nextElements,
     appState: {
@@ -65,7 +78,7 @@ const handleGroupEditingState = (
 export const actionDeleteSelected = register({
   name: "deleteSelectedElements",
   trackEvent: { category: "element", action: "delete" },
-  perform: (elements, appState) => {
+  perform: (elements, appState, _, app) => {
     if (appState.editingLinearElement) {
       const {
         elementId,
@@ -128,7 +141,11 @@ export const actionDeleteSelected = register({
       };
     }
     let { elements: nextElements, appState: nextAppState } =
-      deleteSelectedElements(elements, appState);
+      deleteSelectedElements(
+        elements,
+        appState,
+        app.props.onDeleteCommentElements,
+      );
     fixBindingsAfterDeletion(
       nextElements,
       elements.filter(({ id }) => appState.selectedElementIds[id]),
