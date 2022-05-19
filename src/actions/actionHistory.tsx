@@ -9,6 +9,7 @@ import { isWindows, KEYS } from "../keys";
 import { newElementWith } from "../element/mutateElement";
 import { fixBindingsAfterDeletion } from "../element/binding";
 import { arrayToMap } from "../utils";
+import { isCommentElement } from "../element/typeChecks";
 
 const writeData = (
   prevElements: readonly ExcalidrawElement[],
@@ -34,20 +35,40 @@ const writeData = (
     const deletedElements = prevElements.filter(
       (prevElement) => !nextElementMap.has(prevElement.id),
     );
+
+    const shouldNotDeleteCommentElementsMap = arrayToMap(
+      prevElements.filter((e) => {
+        return isCommentElement(e) && !nextElementMap.has(e.id);
+      }),
+    );
+
     const elements = nextElements
-      .map((nextElement) =>
-        newElementWith(
+      .map((nextElement) => {
+        if (isCommentElement(nextElement)) {
+          // case #1: if comment is previously deleted it shouldn't rendered again;
+          // example: (1) Add comment (2) Delete it (3) on UNDO/REDO operation, comment shouldn't render
+          if (
+            prevElementMap.has(nextElement.id) &&
+            prevElementMap.get(nextElement.id)?.isDeleted
+          ) {
+            return newElementWith(nextElement, { isDeleted: true });
+          }
+        }
+        return newElementWith(
           prevElementMap.get(nextElement.id) || nextElement,
           nextElement,
-        ),
-      )
+        );
+      })
       .concat(
+        // case #2: if comment is previously added it shouldn't be deleted unless forceDeleted by parent (HackerDraw)
+        // example: (1) Add comment (2) on UNDO/REDO operation, comment shouldn't delete
         deletedElements.map((prevElement) =>
-          newElementWith(prevElement, { isDeleted: true }),
+          newElementWith(prevElement, {
+            isDeleted: !shouldNotDeleteCommentElementsMap.has(prevElement.id),
+          }),
         ),
       );
     fixBindingsAfterDeletion(elements, deletedElements);
-
     return {
       elements,
       appState: { ...appState, ...data.appState },

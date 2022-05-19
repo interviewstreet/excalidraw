@@ -177,9 +177,10 @@ export const actionDeleteSelected = register({
         activeTool: { ...appState.activeTool, type: "selection" },
         multiElement: null,
       },
-      commitToHistory: elementToForceDelete
-        ? false
-        : isSomeElementSelected(getNonDeletedElements(elements), appState),
+      commitToHistory: isSomeElementSelected(
+        getNonDeletedElements(elements),
+        appState,
+      ),
     };
   },
   contextItemLabel: "labels.delete",
