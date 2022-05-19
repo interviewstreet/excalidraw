@@ -1344,23 +1344,48 @@ class App extends React.Component<AppProps, AppState> {
     }
     if (
       this.props.deletedCommentID &&
-      prevProps.deletedCommentID !== this.props.deletedCommentID
+      !this.checkSameArray(
+        prevProps.deletedCommentID,
+        this.props.deletedCommentID,
+      )
     ) {
-      const elementToForceDelete = commentElements.find(
-        (element) => element.commentID === this.props.deletedCommentID,
+      const deletedCommentIDMap = new Set(this.props.deletedCommentID);
+      const elementsToForceDelete = commentElements.filter((element) =>
+        deletedCommentIDMap.has(element.commentID),
       );
-      if (elementToForceDelete) {
-        this.syncActionResult(
-          actionDeleteSelected.perform(
-            this.scene.getElementsIncludingDeleted(),
-            this.state,
-            elementToForceDelete,
-            this,
-          ),
-        );
-      }
+      this.syncActionResult(
+        actionDeleteSelected.perform(
+          this.scene.getElementsIncludingDeleted(),
+          this.state,
+          elementsToForceDelete,
+          this,
+        ),
+      );
     }
   }
+
+  private checkSameArray: (
+    a1: Array<string> | undefined | null,
+    a2: Array<string> | undefined | null,
+  ) => boolean = (a1, a2) => {
+    if (!a1 || !a2) {
+      return false;
+    }
+    if (a1.length !== a2.length) {
+      return false;
+    }
+
+    const arr1 = a1.concat().sort();
+    const arr2 = a2.concat().sort();
+
+    for (let i = 0; i < arr1.length; i++) {
+      if (arr1[i] !== arr2[i]) {
+        return false;
+      }
+    }
+
+    return true;
+  };
 
   private onScroll = debounce(() => {
     const { offsetTop, offsetLeft } = this.getCanvasOffsets();

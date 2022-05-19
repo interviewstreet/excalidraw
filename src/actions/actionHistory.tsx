@@ -38,7 +38,7 @@ const writeData = (
 
     const shouldNotDeleteCommentElementsMap = arrayToMap(
       prevElements.filter((e) => {
-        return isCommentElement(e) && !nextElementMap.has(e.id);
+        return isCommentElement(e) && !nextElementMap.has(e.id) && !e.isDeleted;
       }),
     );
 

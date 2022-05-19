@@ -12,21 +12,20 @@ import { getElementsInGroup } from "../groups";
 import { LinearElementEditor } from "../element/linearElementEditor";
 import { fixBindingsAfterDeletion } from "../element/binding";
 import { isBoundToContainer, isCommentElement } from "../element/typeChecks";
+import { arrayToMap } from "../utils";
 
 const deleteSelectedElements = (
   elements: readonly ExcalidrawElement[],
   appState: AppState,
   currentUser?: UserProp,
   canCommentElementBeDeleted = true,
-  forceDeleteElement?: ExcalidrawElement,
+  forceDeleteElements?: ExcalidrawElement[],
 ) => {
   let isActiveCommentDeleted = false;
+  const forceDeleteElementsMap = arrayToMap(forceDeleteElements || []);
   const nextElements = elements.map((el) => {
-    if (forceDeleteElement) {
-      if (forceDeleteElement.id === el.id) {
-        return newElementWith(el, { isDeleted: true });
-      }
-      return el;
+    if (forceDeleteElementsMap.has(el.id)) {
+      return newElementWith(el, { isDeleted: true });
     }
     if (appState.selectedElementIds[el.id]) {
       if (appState.activeComment?.element.id === el.id) {
@@ -92,7 +91,7 @@ const handleGroupEditingState = (
 export const actionDeleteSelected = register({
   name: "deleteSelectedElements",
   trackEvent: { category: "element", action: "delete" },
-  perform: (elements, appState, elementToForceDelete, app) => {
+  perform: (elements, appState, forceDeleteElements, app) => {
     if (appState.editingLinearElement) {
       const {
         elementId,
@@ -161,7 +160,7 @@ export const actionDeleteSelected = register({
         appState,
         app.props.user,
         false,
-        elementToForceDelete,
+        forceDeleteElements,
       );
     fixBindingsAfterDeletion(
       nextElements,
