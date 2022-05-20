@@ -175,6 +175,7 @@ export const actionDeleteSelected = register({
         ...nextAppState,
         activeTool: { ...appState.activeTool, type: "selection" },
         multiElement: null,
+        activeComment: null,
       },
       commitToHistory: isSomeElementSelected(
         getNonDeletedElements(elements),
