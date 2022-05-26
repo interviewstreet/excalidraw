@@ -18,6 +18,7 @@ import { newElementWith } from "../element/mutateElement";
 import { getDefaultAppState, isEraserActive } from "../appState";
 import ClearCanvas from "../components/ClearCanvas";
 import clsx from "clsx";
+import { isCommentElement } from "../element/typeChecks";
 
 export const actionChangeViewBackgroundColor = register({
   name: "changeViewBackgroundColor",
@@ -56,7 +57,9 @@ export const actionClearCanvas = register({
     app.imageCache.clear();
     return {
       elements: elements.map((element) =>
-        newElementWith(element, { isDeleted: true }),
+        isCommentElement(element)
+          ? element
+          : newElementWith(element, { isDeleted: true }),
       ),
       appState: {
         ...getDefaultAppState(),

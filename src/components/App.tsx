@@ -119,12 +119,17 @@ import {
 } from "../element/binding";
 import { LinearElementEditor } from "../element/linearElementEditor";
 import { mutateElement, newElementWith } from "../element/mutateElement";
-import { deepCopyElement, newFreeDrawElement } from "../element/newElement";
+import {
+  deepCopyElement,
+  newCommentElement,
+  newFreeDrawElement,
+} from "../element/newElement";
 import {
   hasBoundTextElement,
   isBindingElement,
   isBindingElementType,
   isBoundToContainer,
+  isCommentElement,
   isImageElement,
   isInitializedImageElement,
   isLinearElement,
@@ -144,6 +149,7 @@ import {
   FileId,
   NonDeletedExcalidrawElement,
   ExcalidrawTextContainer,
+  ExcalidrawCommentElement,
 } from "../element/types";
 import { getCenter, getDistance } from "../gesture";
 import {
@@ -198,6 +204,8 @@ import {
   PointerDownState,
   SceneData,
   DeviceType,
+  ActiveComment,
+  CommentOwner,
 } from "../types";
 import {
   debounce,
@@ -324,6 +332,8 @@ class App extends React.Component<AppProps, AppState> {
   public files: BinaryFiles = {};
   public imageCache: AppClassProperties["imageCache"] = new Map();
 
+  public excalOwner: CommentOwner;
+
   hitLinkElement?: NonDeletedExcalidrawElement;
   lastPointerDown: React.PointerEvent<HTMLCanvasElement> | null = null;
   lastPointerUp: React.PointerEvent<HTMLElement> | PointerEvent | null = null;
@@ -407,6 +417,37 @@ class App extends React.Component<AppProps, AppState> {
 
     this.actionManager.registerAction(createUndoAction(this.history));
     this.actionManager.registerAction(createRedoAction(this.history));
+
+    this.excalOwner = {
+      id: props.user?.email || this.id,
+      first_name: props.user?.first_name || "Anonymous",
+      email: props.user?.email || "Anonymous@hackerdraw.com",
+      color: props.user?.color || "#e64980",
+      ...props.user,
+    };
+
+    this.cacheCommentOwnerImage(this.excalOwner);
+  }
+
+  private cacheCommentOwnerImage(user: CommentOwner) {
+    if (user.image) {
+      try {
+        const oldImage = this.imageCache.get(user.id as FileId)?.image;
+        // @ts-ignore
+        if (oldImage && oldImage?.src === user.image) {
+          return;
+        }
+      } catch {}
+      const image = new Image();
+      image.src = user.image;
+      image.onload = () => {
+        this.imageCache.set(user.id as FileId, {
+          image,
+          mimeType: "image/png",
+        });
+      };
+      image.onerror = () => {};
+    }
   }
 
   private renderCanvas() {
@@ -812,7 +853,6 @@ class App extends React.Component<AppProps, AppState> {
         },
       };
     }
-
     const scene = restore(initialData, null, null);
     scene.appState = {
       ...scene.appState,
@@ -1194,6 +1234,8 @@ class App extends React.Component<AppProps, AppState> {
       );
       cursorButton[socketId] = user.button;
     });
+    let activeComment = this.state.activeComment;
+    const commentElements: NonDeleted<ExcalidrawCommentElement>[] = [];
     const renderingElements = this.scene.getElements().filter((element) => {
       if (isImageElement(element)) {
         if (
@@ -1206,6 +1248,36 @@ class App extends React.Component<AppProps, AppState> {
       }
       // don't render text element that's being currently edited (it's
       // rendered on remote only)
+      if (isCommentElement(element)) {
+        if (this.state.activeComment?.element.id === element.id) {
+          const { x: canvasX, y: canvasY } = sceneCoordsToViewportCoords(
+            {
+              sceneX: element.x,
+              sceneY: element.y,
+            },
+            this.state,
+          );
+          if (
+            canvasX !== this.state.activeComment.canvasX ||
+            canvasY !== this.state.activeComment.canvasY
+          ) {
+            activeComment = { element, canvasX, canvasY };
+          }
+        }
+
+        if (element.owner.email === this.excalOwner.email) {
+          element.owner = {
+            ...element.owner,
+            first_name: this.excalOwner.first_name,
+            color: this.excalOwner.color,
+            last_name: this.excalOwner.last_name,
+            image: this.excalOwner.image,
+          };
+        }
+        this.cacheCommentOwnerImage(element.owner);
+        commentElements.push(element);
+        return false;
+      }
       return (
         !this.state.editingElement ||
         this.state.editingElement.type !== "text" ||
@@ -1213,7 +1285,7 @@ class App extends React.Component<AppProps, AppState> {
       );
     });
     const { atLeastOneVisibleElement, scrollBars } = renderScene(
-      renderingElements,
+      [...renderingElements, ...commentElements], // this is because we want to keep CommentElements on top of every other element
       this.state,
       this.state.selectionElement,
       window.devicePixelRatio,
@@ -1260,11 +1332,60 @@ class App extends React.Component<AppProps, AppState> {
     if (!this.state.isLoading) {
       this.props.onChange?.(
         this.scene.getElementsIncludingDeleted(),
-        this.state,
+        {
+          ...this.state,
+          activeComment:
+            activeComment?.element.commentID === this.props.deletedCommentID
+              ? null
+              : activeComment,
+        },
         this.files,
       );
     }
+    if (
+      this.props.deletedCommentID &&
+      !this.checkSameArray(
+        prevProps.deletedCommentID,
+        this.props.deletedCommentID,
+      )
+    ) {
+      const deletedCommentIDMap = new Set(this.props.deletedCommentID);
+      const elementsToForceDelete = commentElements.filter((element) =>
+        deletedCommentIDMap.has(element.commentID),
+      );
+      this.syncActionResult(
+        actionDeleteSelected.perform(
+          this.scene.getElementsIncludingDeleted(),
+          this.state,
+          elementsToForceDelete,
+          this,
+        ),
+      );
+    }
   }
+
+  private checkSameArray: (
+    a1: Array<string> | undefined | null,
+    a2: Array<string> | undefined | null,
+  ) => boolean = (a1, a2) => {
+    if (!a1 || !a2) {
+      return false;
+    }
+    if (a1.length !== a2.length) {
+      return false;
+    }
+
+    const arr1 = a1.concat().sort();
+    const arr2 = a2.concat().sort();
+
+    for (let i = 0; i < arr1.length; i++) {
+      if (arr1[i] !== arr2[i]) {
+        return false;
+      }
+    }
+
+    return true;
+  };
 
   private onScroll = debounce(() => {
     const { offsetTop, offsetLeft } = this.getCanvasOffsets();
@@ -2876,7 +2997,9 @@ class App extends React.Component<AppProps, AppState> {
     const point = { ...pointerDownState.lastCoords };
     let samplingInterval = 0;
     while (samplingInterval <= distance) {
-      const hitElements = this.getElementsAtPosition(point.x, point.y);
+      const hitElements = this.getElementsAtPosition(point.x, point.y).filter(
+        (ele) => !isCommentElement(ele),
+      );
       updateElementIds(hitElements);
 
       // Exit since we reached current point
@@ -2897,6 +3020,9 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     const elements = this.scene.getElements().map((ele) => {
+      if (isCommentElement(ele)) {
+        return ele;
+      }
       const id =
         isBoundToContainer(ele) && idsToUpdate.includes(ele.containerId)
           ? ele.containerId
@@ -3054,6 +3180,11 @@ class App extends React.Component<AppProps, AppState> {
     } else if (this.state.activeTool.type === "freedraw") {
       this.handleFreeDrawElementOnPointerDown(
         event,
+        this.state.activeTool.type,
+        pointerDownState,
+      );
+    } else if (this.state.activeTool.type === "comment") {
+      this.handleCommentElementOnPointerDown(
         this.state.activeTool.type,
         pointerDownState,
       );
@@ -3557,10 +3688,28 @@ class App extends React.Component<AppProps, AppState> {
               !someHitElementIsSelected &&
               !pointerDownState.hit.hasHitCommonBoundingBoxOfSelectedElements
             ) {
+              let activeComment: ActiveComment | null = null;
+              if (isCommentElement(hitElement)) {
+                const { x: canvasX, y: canvasY } = sceneCoordsToViewportCoords(
+                  {
+                    sceneX: hitElement.x,
+                    sceneY: hitElement.y,
+                  },
+                  this.state,
+                );
+
+                activeComment = {
+                  element: hitElement,
+                  canvasX,
+                  canvasY,
+                };
+              }
+
               this.setState((prevState) => {
                 return selectGroupsForSelectedElements(
                   {
                     ...prevState,
+                    activeComment,
                     selectedElementIds: {
                       ...prevState.selectedElementIds,
                       [hitElement.id]: true,
@@ -3605,6 +3754,43 @@ class App extends React.Component<AppProps, AppState> {
       point.y < y2 + threshold
     );
   }
+
+  private handleCommentElementOnPointerDown = async (
+    elementType: "comment",
+    pointerDownState: PointerDownState,
+  ): Promise<void> => {
+    if (!this.props.user) {
+      return;
+    }
+    const [gridX, gridY] = getGridPoint(
+      pointerDownState.origin.x,
+      pointerDownState.origin.y,
+      this.state.gridSize,
+    );
+
+    const { x, y } = sceneCoordsToViewportCoords(
+      {
+        sceneX: gridX,
+        sceneY: gridY,
+      },
+      this.state,
+    );
+
+    const commentID = await this.props.registerComment(x, y);
+
+    const element = newCommentElement({
+      type: elementType,
+      x: gridX,
+      y: gridY,
+      owner: this.excalOwner,
+      commentID,
+    });
+
+    this.scene.replaceAllElements([
+      ...this.scene.getElementsIncludingDeleted(),
+      element,
+    ]);
+  };
 
   private handleTextOnPointerDown = (
     event: React.PointerEvent<HTMLCanvasElement>,
@@ -4718,6 +4904,9 @@ class App extends React.Component<AppProps, AppState> {
 
   private eraseElements = (pointerDownState: PointerDownState) => {
     const elements = this.scene.getElements().map((ele) => {
+      if (isCommentElement(ele)) {
+        return ele;
+      }
       if (
         pointerDownState.elementIdsToErase[ele.id] &&
         pointerDownState.elementIdsToErase[ele.id].erase
@@ -5192,6 +5381,7 @@ class App extends React.Component<AppProps, AppState> {
         isElementInGroup(hitElement, prevState.editingGroupId)
           ? prevState.editingGroupId
           : null,
+      activeComment: null,
     }));
     this.setState({
       selectedElementIds: {},
@@ -5644,49 +5834,59 @@ class App extends React.Component<AppProps, AppState> {
           elements,
         });
       } else {
+        const contextMenuOptions: (
+          | false
+          | undefined
+          | null
+          | ContextMenuOption
+        )[] =
+          selectedElements.length === 1 && isCommentElement(selectedElements[0])
+            ? []
+            : [
+                this.deviceType.isMobile && actionCut,
+                this.deviceType.isMobile && navigator.clipboard && actionCopy,
+                this.deviceType.isMobile &&
+                  navigator.clipboard && {
+                    name: "paste",
+                    trackEvent: false,
+                    perform: (elements, appStates) => {
+                      this.pasteFromClipboard(null);
+                      return {
+                        commitToHistory: false,
+                      };
+                    },
+                    contextItemLabel: "labels.paste",
+                  },
+                this.deviceType.isMobile && separator,
+                ...options,
+                separator,
+                actionCopyStyles,
+                actionPasteStyles,
+                separator,
+                maybeGroupAction && actionGroup,
+                mayBeAllowUnbinding && actionUnbindText,
+                mayBeAllowBinding && actionBindText,
+                maybeUngroupAction && actionUngroup,
+                (maybeGroupAction || maybeUngroupAction) && separator,
+                actionAddToLibrary,
+                separator,
+                actionSendBackward,
+                actionBringForward,
+                actionSendToBack,
+                actionBringToFront,
+                separator,
+                maybeFlipHorizontal && actionFlipHorizontal,
+                maybeFlipVertical && actionFlipVertical,
+                (maybeFlipHorizontal || maybeFlipVertical) && separator,
+                actionLink.contextItemPredicate(elements, this.state) &&
+                  actionLink,
+                actionDuplicateSelection,
+                actionToggleLock,
+                separator,
+                actionDeleteSelected,
+              ];
         ContextMenu.push({
-          options: [
-            this.deviceType.isMobile && actionCut,
-            this.deviceType.isMobile && navigator.clipboard && actionCopy,
-            this.deviceType.isMobile &&
-              navigator.clipboard && {
-                name: "paste",
-                trackEvent: false,
-                perform: (elements, appStates) => {
-                  this.pasteFromClipboard(null);
-                  return {
-                    commitToHistory: false,
-                  };
-                },
-                contextItemLabel: "labels.paste",
-              },
-            this.deviceType.isMobile && separator,
-            ...options,
-            separator,
-            actionCopyStyles,
-            actionPasteStyles,
-            separator,
-            maybeGroupAction && actionGroup,
-            mayBeAllowUnbinding && actionUnbindText,
-            mayBeAllowBinding && actionBindText,
-            maybeUngroupAction && actionUngroup,
-            (maybeGroupAction || maybeUngroupAction) && separator,
-            actionAddToLibrary,
-            separator,
-            actionSendBackward,
-            actionBringForward,
-            actionSendToBack,
-            actionBringToFront,
-            separator,
-            maybeFlipHorizontal && actionFlipHorizontal,
-            maybeFlipVertical && actionFlipVertical,
-            (maybeFlipHorizontal || maybeFlipVertical) && separator,
-            actionLink.contextItemPredicate(elements, this.state) && actionLink,
-            actionDuplicateSelection,
-            actionToggleLock,
-            separator,
-            actionDeleteSelected,
-          ],
+          options: [...contextMenuOptions],
           top,
           left,
           actionManager: this.actionManager,

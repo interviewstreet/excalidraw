@@ -37,6 +37,9 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     autoFocus = false,
     generateIdForFile,
     onLinkOpen,
+    registerComment,
+    user,
+    deletedCommentID,
   } = props;
 
   const canvasActions = props.UIOptions?.canvasActions;
@@ -100,6 +103,9 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
           autoFocus={autoFocus}
           generateIdForFile={generateIdForFile}
           onLinkOpen={onLinkOpen}
+          user={user}
+          registerComment={registerComment}
+          deletedCommentID={deletedCommentID}
         />
       </Provider>
     </InitializeApp>

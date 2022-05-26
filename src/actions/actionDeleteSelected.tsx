@@ -5,33 +5,65 @@ import { trash } from "../components/icons";
 import { t } from "../i18n";
 import { register } from "./register";
 import { getNonDeletedElements } from "../element";
-import { ExcalidrawElement } from "../element/types";
-import { AppState } from "../types";
+import { ExcalidrawCommentElement, ExcalidrawElement } from "../element/types";
+import { AppState, UserProp } from "../types";
 import { newElementWith } from "../element/mutateElement";
 import { getElementsInGroup } from "../groups";
 import { LinearElementEditor } from "../element/linearElementEditor";
 import { fixBindingsAfterDeletion } from "../element/binding";
-import { isBoundToContainer } from "../element/typeChecks";
+import { isBoundToContainer, isCommentElement } from "../element/typeChecks";
+import { arrayToMap } from "../utils";
 
 const deleteSelectedElements = (
   elements: readonly ExcalidrawElement[],
   appState: AppState,
+  currentUser?: UserProp,
+  canCommentElementBeDeleted = true,
+  forceDeleteElements?: ExcalidrawElement[],
 ) => {
+  let isActiveCommentDeleted = false;
+  const forceDeleteElementsMap = arrayToMap(forceDeleteElements || []);
+  const nextElements = elements.map((el) => {
+    if (forceDeleteElementsMap.has(el.id)) {
+      return newElementWith(el, { isDeleted: true });
+    }
+    if (appState.selectedElementIds[el.id]) {
+      if (appState.activeComment?.element.id === el.id) {
+        isActiveCommentDeleted = true;
+      }
+      if (isCommentElement(el)) {
+        if (
+          (currentUser && el.owner.email !== currentUser.email) ||
+          !canCommentElementBeDeleted
+        ) {
+          return el;
+        }
+      }
+      return newElementWith(el, { isDeleted: true });
+    }
+    if (isBoundToContainer(el) && appState.selectedElementIds[el.containerId]) {
+      if (appState.activeComment?.element.id === el.id) {
+        isActiveCommentDeleted = true;
+      }
+      if (isCommentElement(el)) {
+        if (
+          (currentUser &&
+            (el as ExcalidrawCommentElement).owner.email !==
+              currentUser.email) ||
+          !canCommentElementBeDeleted
+        ) {
+          return el;
+        }
+      }
+      return newElementWith(el, { isDeleted: true });
+    }
+    return el;
+  });
   return {
-    elements: elements.map((el) => {
-      if (appState.selectedElementIds[el.id]) {
-        return newElementWith(el, { isDeleted: true });
-      }
-      if (
-        isBoundToContainer(el) &&
-        appState.selectedElementIds[el.containerId]
-      ) {
-        return newElementWith(el, { isDeleted: true });
-      }
-      return el;
-    }),
+    elements: nextElements,
     appState: {
       ...appState,
+      activeComment: isActiveCommentDeleted ? null : appState.activeComment,
       selectedElementIds: {},
     },
   };
@@ -59,7 +91,7 @@ const handleGroupEditingState = (
 export const actionDeleteSelected = register({
   name: "deleteSelectedElements",
   trackEvent: { category: "element", action: "delete" },
-  perform: (elements, appState) => {
+  perform: (elements, appState, forceDeleteElements, app) => {
     if (appState.editingLinearElement) {
       const {
         elementId,
@@ -121,8 +153,15 @@ export const actionDeleteSelected = register({
         commitToHistory: true,
       };
     }
+
     let { elements: nextElements, appState: nextAppState } =
-      deleteSelectedElements(elements, appState);
+      deleteSelectedElements(
+        elements,
+        appState,
+        app.props.user,
+        false,
+        forceDeleteElements,
+      );
     fixBindingsAfterDeletion(
       nextElements,
       elements.filter(({ id }) => appState.selectedElementIds[id]),
@@ -136,6 +175,7 @@ export const actionDeleteSelected = register({
         ...nextAppState,
         activeTool: { ...appState.activeTool, type: "selection" },
         multiElement: null,
+        activeComment: null,
       },
       commitToHistory: isSomeElementSelected(
         getNonDeletedElements(elements),

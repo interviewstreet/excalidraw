@@ -680,6 +680,17 @@ const ExcalidrawWrapper = () => {
         handleKeyboardGlobally={true}
         onLibraryChange={onLibraryChange}
         autoFocus={true}
+        user={{
+          first_name: "Iron",
+          last_name: "Man",
+          email: "iron.man@hackerrank.com",
+          color: "#00ff",
+          image: "https://i.pravatar.cc/200",
+        }}
+        registerComment={async (x, y) => {
+          // on backend createComment with x,y coords
+          return "abcdefgh";
+        }}
       />
       {excalidrawAPI && (
         <CollabWrapper
