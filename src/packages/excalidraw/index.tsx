@@ -40,6 +40,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     registerComment,
     user,
     deletedCommentID,
+    renderCopyDownload,
   } = props;
 
   const canvasActions = props.UIOptions?.canvasActions;
@@ -79,6 +80,7 @@ const ExcalidrawBase = (props: ExcalidrawProps) => {
     <InitializeApp langCode={langCode}>
       <Provider unstable_createStore={() => jotaiStore} scope={jotaiScope}>
         <App
+          renderCopyDownload={renderCopyDownload}
           onChange={onChange}
           initialData={initialData}
           excalidrawRef={excalidrawRef}
