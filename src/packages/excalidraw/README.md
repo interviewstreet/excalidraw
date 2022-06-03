@@ -1,3 +1,12 @@
+## @hackerdraw/excalidraw
+
+This is a fork of [@excalidraw/excalidraw](https://github.com/excalidraw/excalidraw) package maintained by [HackerDraw Team](https://www.hackerdraw.com).
+
+If you're planning to embed Excalidraw whiteboard in your project maintained by the Excalidraw team, please refer to : [https://npmjs.com/@excalidraw/excalidraw](https://npmjs.com/@excalidraw/excalidraw).
+
+
+----
+
 ### Excalidraw
 
 Excalidraw exported as a component to directly embed in your projects.
