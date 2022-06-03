@@ -16,13 +16,13 @@ Excalidraw exported as a component to directly embed in your projects.
 You can use npm
 
 ```
-npm install react react-dom @excalidraw/excalidraw
+npm install react react-dom @hackerdraw/excalidraw
 ```
 
 or via yarn
 
 ```
-yarn add react react-dom @excalidraw/excalidraw
+yarn add react react-dom @hackerdraw/excalidraw
 ```
 
 After installation you will see a folder `excalidraw-assets` and `excalidraw-assets-dev` in `dist` directory which contains the assets needed for this app in prod and dev mode respectively.
