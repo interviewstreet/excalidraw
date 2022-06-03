@@ -643,6 +643,7 @@ const ExcalidrawWrapper = () => {
       })}
     >
       <Excalidraw
+        renderCopyDownload={() => <></>}
         ref={excalidrawRefCallback}
         onChange={onChange}
         initialData={initialStatePromiseRef.current.promise}

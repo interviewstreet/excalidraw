@@ -10,7 +10,7 @@ import { calculateScrollCenter, getSelectedElements } from "../scene";
 import { ExportType } from "../scene/types";
 import { AppProps, AppState, ExcalidrawProps, BinaryFiles } from "../types";
 import { muteFSAbortError, setCursorForShape } from "../utils";
-import { SelectedShapeActions, ShapesSwitcher, ZoomActions } from "./Actions";
+import { SelectedShapeActions, ShapesSwitcher } from "./Actions";
 import { BackgroundPickerAndDarkModeToggle } from "./BackgroundPickerAndDarkModeToggle";
 import CollabButton from "./CollabButton";
 import { ErrorDialog } from "./ErrorDialog";
@@ -69,6 +69,7 @@ interface LayerUIProps {
   library: Library;
   id: string;
   onImageAction: (data: { insertOnCanvasDirectly: boolean }) => void;
+  renderCopyDownload: () => JSX.Element;
 }
 
 const LayerUI = ({
@@ -96,6 +97,7 @@ const LayerUI = ({
   library,
   id,
   onImageAction,
+  renderCopyDownload,
 }: LayerUIProps) => {
   const deviceType = useDeviceType();
 
@@ -437,24 +439,8 @@ const LayerUI = ({
         >
           <Stack.Col gap={2}>
             <Section heading="canvasActions">
-              <Island padding={1}>
-                <ZoomActions
-                  renderAction={actionManager.renderAction}
-                  zoom={appState.zoom}
-                />
-              </Island>
               {!viewModeEnabled && (
                 <>
-                  <div
-                    className={clsx("undo-redo-buttons zen-mode-transition", {
-                      "layer-ui__wrapper__footer-left--transition-bottom":
-                        zenModeEnabled,
-                    })}
-                  >
-                    {actionManager.renderAction("undo", { size: "small" })}
-                    {actionManager.renderAction("redo", { size: "small" })}
-                  </div>
-
                   <div
                     className={clsx("eraser-buttons zen-mode-transition", {
                       "layer-ui__wrapper__footer-left--transition-left":
@@ -477,6 +463,7 @@ const LayerUI = ({
                     {actionManager.renderAction("finalize", { size: "small" })}
                   </div>
                 )}
+              {renderCopyDownload()}
             </Section>
           </Stack.Col>
         </div>

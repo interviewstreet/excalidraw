@@ -364,7 +364,6 @@ class App extends React.Component<AppProps, AppState> {
       height: window.innerHeight,
       showHyperlinkPopup: false,
     };
-
     this.id = nanoid();
 
     if (excalidrawRef) {
@@ -516,8 +515,8 @@ class App extends React.Component<AppProps, AppState> {
       renderTopRightUI,
       renderFooter,
       renderCustomStats,
+      renderCopyDownload,
     } = this.props;
-
     return (
       <div
         className={clsx("excalidraw excalidraw-container", {
@@ -558,6 +557,7 @@ class App extends React.Component<AppProps, AppState> {
               isCollaborating={this.props.isCollaborating}
               renderTopRightUI={renderTopRightUI}
               renderCustomFooter={renderFooter}
+              renderCopyDownload={renderCopyDownload}
               viewModeEnabled={viewModeEnabled}
               showExitZenModeBtn={
                 typeof this.props?.zenModeEnabled === "undefined" &&
