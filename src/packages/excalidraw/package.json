@@ -1,5 +1,5 @@
 {
-  "name": "@hackerdraw/excalidraw",
+  "name": "@hackerrank/excalidraw",
   "version": "0.12.7",
   "main": "main.js",
   "types": "types/packages/excalidraw/index.d.ts",

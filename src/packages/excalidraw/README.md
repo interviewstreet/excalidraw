@@ -1,4 +1,4 @@
-## @hackerdraw/excalidraw
+## @hackerrank/excalidraw
 
 This is a fork of [@excalidraw/excalidraw](https://github.com/excalidraw/excalidraw) package maintained by [HackerDraw Team](https://www.hackerdraw.com).
 
@@ -16,13 +16,13 @@ Excalidraw exported as a component to directly embed in your projects.
 You can use npm
 
 ```
-npm install react react-dom @hackerdraw/excalidraw
+npm install react react-dom @hackerrank/excalidraw
 ```
 
 or via yarn
 
 ```
-yarn add react react-dom @hackerdraw/excalidraw
+yarn add react react-dom @hackerrank/excalidraw
 ```
 
 After installation you will see a folder `excalidraw-assets` and `excalidraw-assets-dev` in `dist` directory which contains the assets needed for this app in prod and dev mode respectively.
